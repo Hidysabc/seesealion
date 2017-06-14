@@ -19,7 +19,7 @@ from keras.optimizers import RMSprop, Adam
 import boto3
 #from resnet3d import Resnet3DBuilder
 import sys
-#from callbacks import ModelCheckpointS3
+from callbacks import ModelCheckpointS3
 
 model_name = "hw-inceptionv3"
 
@@ -27,7 +27,7 @@ s3bucket = "seesealion-stage1-images"
 #input_sample_images = "sample_images"
 #input_preprocessing_images = "preprocessing_images"
 #input_csv = "csv"
-input_dir = '/tmp/data/'
+input_dir = '/tmp/seesealion/data/'
 batch_size = 32
 NB_CLASSES = 2
 train_ratio = 0.85
@@ -136,8 +136,12 @@ validate_datagen = SLIDG(
         horizontal_flip=True,
         fill_mode='nearest')
 
-directory = '/workspace/seesealion/data/Kaggle-NOAA-SeaLions_FILES/tiles'
-csv_path = '/workspace/seesealion/data/Kaggle-NOAA-SeaLions_FILES/tiles_info_all.csv'
+#directory = '/workspace/seesealion/data/Kaggle-NOAA-SeaLions_FILES/tiles'
+#csv_path = '/workspace/seesealion/data/Kaggle-NOAA-SeaLions_FILES/tiles_info_all.csv'
+
+directory = '/tmp/seesealion/data/Kaggle-NOAA-SeaLions_FILES/tiles'
+csv_path = '/tmp/seesealion/data/Kaggle-NOAA-SeaLions_FILES/tiles_info_all.csv'
+
 
 tiles_info = pd.read_csv(csv_path).set_index('tile_filename')
 '''
@@ -153,18 +157,14 @@ tiles_info.to_csv('tiles_info_all.csv')
 df_csv_class_train = tiles_info.loc[tiles_info['set'] == 'train', 'class']
 df_csv_class_valid = tiles_info.loc[tiles_info['set'] == 'valid', 'class']
 
-train_gen = train_datagen.flow_from_directory_numpy(directory = directory, df_csv_class = df_csv_class_train, batch_size= 2,
-                        save_to_dir='/workspace/seesealion/data/Kaggle-NOAA-SeaLions_FILES/sealionpreview',
-                        save_format='jpeg')
-validate_gen = train_datagen.flow_from_directory_numpy(directory = directory, df_csv_class = df_csv_class_valid, batch_size= 2,
-                        save_to_dir='/workspace/seesealion/data/Kaggle-NOAA-SeaLions_FILES/sealionpreview',
-                        save_format='jpeg')
+train_gen = train_datagen.flow_from_directory_numpy(directory = directory, df_csv_class = df_csv_class_train, batch_size= 2)
+validate_gen = train_datagen.flow_from_directory_numpy(directory = directory, df_csv_class = df_csv_class_valid, batch_size= 2)
 
-'''
+
 checkpointer = ModelCheckpointS3(monitor='val_loss',filepath="/tmp/{}-best.hdf5".format(model_name),
                                  bucket = s3bucket,
                                  verbose=0, save_best_only=True)
-'''
+
 reduce_lr = ReduceLROnPlateau(monitor="val_loss")
 
 logger.info("Start training...")
@@ -174,7 +174,7 @@ history = model.fit_generator(train_gen,
                               verbose = 1,
                               validation_data= validate_gen,
                               validation_steps = 10000,
-                              callbacks= [reduce_lr])
+                              callbacks= [checkpointer, reduce_lr])
 
 val_loss = history.history["val_loss"]
 val_acc = history.history["val_acc"]

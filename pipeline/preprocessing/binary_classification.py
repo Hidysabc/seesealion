@@ -37,7 +37,7 @@ images = glob.glob(os.path.join(TRAIN_DATA_PATH,"*.jpg"))
 coordinates = glob.glob(os.path.join(COORDINATES_PATH,"*.csv"))
 image_ids = [os.path.basename(coordinate).strip(".csv").split("_")[1]
              for coordinate in coordinates]
-
+validate_ratio = 0.15
 iid = image_ids
 
 def tiles_binary_classification(iid):
@@ -100,6 +100,20 @@ pool = mp.Pool(min(len(iid),NCPU))
 res = pool.map_async(tiles_binary_classification, iid)
 out = res.get()
 
-logger.info("Done! :)")
+logger.info("Tiles binary classification is done! :)")
+logger.info("Concating all the tiles info into one csv_file...")
+csv_files = glob.glob(os.path.join(TILES_PATH,"*.csv"))
+output_all = [pd.read_csv(single_csv) for single_csv in csv_files]
+tiles_info = pd.concat(output_all,axis=0)
+tiles_info = tiles_info.set_index('tile_filename')
+logger.info("Split images into train and valid sets")
 
+# Generate train and valid image sets
+images = np.unique(tiles_info['image_id'])
+valid_images = np.random.choice(images, int(len(images)*validate_ratio+0.5))
+
+tiles_info['set'] = 'train'
+tiles_info.loc[tiles_info.image_id.isin(valid_images), 'set'] = 'valid'
+
+tiles_info.to_csv(os.path.join(DATA_PATH,'tiles_info_all.csv'))
 
