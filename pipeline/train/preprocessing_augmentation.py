@@ -580,10 +580,10 @@ datagen = SeaLionImageDataGenerator(
         horizontal_flip=True,
         fill_mode='nearest')
 
-directory = '/workspace/seesealion/data/Kaggle-NOAA-SeaLions_FILES/tiles'
-csv_path = '/workspace/seesealion/data/Kaggle-NOAA-SeaLions_FILES/tiles_info_all.csv'
-tiles_info = pd.read_csv(csv_path)
-df_csv_class = tiles_info.set_index('tile_filename', drop = True)["class"]
+#directory = '/workspace/seesealion/data/Kaggle-NOAA-SeaLions_FILES/tiles'
+#csv_path = '/workspace/seesealion/data/Kaggle-NOAA-SeaLions_FILES/tiles_info_all.csv'
+#tiles_info = pd.read_csv(csv_path)
+#df_csv_class = tiles_info.set_index('tile_filename', drop = True)["class"]
 
 '''
 img = load_img('/workspace/seesealion/data/Kaggle-NOAA-SeaLions_FILES/Train/0.jpg')  # this is a PIL image
@@ -597,6 +597,7 @@ img = img.reshape((1,)+ img.shape)
 
 # the .flow() command below generates batches of randomly transformed images
 # and saves the results to the `preview/` directory
+'''
 i = 0
 
 for batch_x, batch_y in datagen.flow_from_directory_numpy(directory = directory, df_csv_class = df_csv_class, batch_size= 2,
@@ -606,4 +607,4 @@ for batch_x, batch_y in datagen.flow_from_directory_numpy(directory = directory,
     i += 1
     if i > 5:
         break  # otherwise the generator would loop indefinitely
-
+'''
