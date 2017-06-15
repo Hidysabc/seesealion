@@ -103,7 +103,7 @@ if len(sys.argv)>1:
     model = load_model(model_path)
 else:
     logger.info("Start building model...")
-    base_model = I_v3.InceptionV3(input_shape = (299,299,3),classes = 2,include_top=False)
+    base_model = I_v3.InceptionV3(input_shape = (299,299,3),weights='imagenet',classes = 2,include_top=False)
     x = base_model.output
     x = GlobalAveragePooling2D()(x)
     # let's add a fully-connected layer
