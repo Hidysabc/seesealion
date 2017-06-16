@@ -115,7 +115,7 @@ else:
     model = Model(inputs=base_model.input, outputs=predictions)
 
 
-model.compile(loss='binary_crossentropy',
+model.compile(metrics=['accuracy'], loss='binary_crossentropy',
               optimizer='rmsprop')
 
 train_datagen = SLIDG(
@@ -169,11 +169,11 @@ reduce_lr = ReduceLROnPlateau(monitor="val_loss")
 
 logger.info("Start training...")
 history = model.fit_generator(train_gen,
-                              steps_per_epoch = 10000 ,
+                              steps_per_epoch = 100000 ,
                               epochs = nb_epoch,
                               verbose = 1,
                               validation_data= validate_gen,
-                              validation_steps = 10000,
+                              validation_steps = 100000,
                               callbacks= [checkpointer, reduce_lr])
 
 val_loss = history.history["val_loss"]
