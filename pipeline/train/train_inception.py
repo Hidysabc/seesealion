@@ -169,11 +169,11 @@ reduce_lr = ReduceLROnPlateau(monitor="val_loss")
 
 logger.info("Start training...")
 history = model.fit_generator(train_gen,
-                              steps_per_epoch = 100000 ,
+                              steps_per_epoch = 10000 ,
                               epochs = nb_epoch,
                               verbose = 1,
                               validation_data= validate_gen,
-                              validation_steps = 100000,
+                              validation_steps = 10000,
                               callbacks= [checkpointer, reduce_lr])
 
 val_loss = history.history["val_loss"]
