@@ -158,7 +158,7 @@ df_csv_class_train = tiles_info.loc[tiles_info['set'] == 'train', 'class']
 df_csv_class_valid = tiles_info.loc[tiles_info['set'] == 'valid', 'class']
 
 train_gen = train_datagen.flow_from_directory_numpy(directory = directory, df_csv_class = df_csv_class_train, batch_size= 2)
-validate_gen = train_datagen.flow_from_directory_numpy(directory = directory, df_csv_class = df_csv_class_valid, batch_size= 2)
+validate_gen = validate_datagen.flow_from_directory_numpy(directory = directory, df_csv_class = df_csv_class_valid, batch_size= 2)
 
 
 checkpointer = ModelCheckpointS3(monitor='val_loss',filepath="/tmp/{}-best.hdf5".format(model_name),
