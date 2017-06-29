@@ -182,6 +182,20 @@ class SeaLionImageDataGenerator(object):
                  shuffle= shuffle, seed= seed,
                  data_format= self.data_format, save_to_dir= save_to_dir,
                  save_format= save_format)
+
+    def flow_from_directory_numpy_32(self, directory, df_csv_class,
+                image_shape= (32,32,3), batch_size= 32, color_mode = 'bgr',
+                classes= None, class_mode="categorical",
+                shuffle=True, seed=None,
+                data_format=None, save_to_dir=None,
+                save_format='jpeg'):
+        return DirectoryNumpyArrayIterator_32(directory, df_csv_class, self,
+                 image_shape= image_shape, batch_size= batch_size, color_mode = color_mode,
+                 classes= classes, class_mode= class_mode,
+                 shuffle= shuffle, seed= seed,
+                 data_format= self.data_format, save_to_dir= save_to_dir,
+                 save_format= save_format)
+
     def standardize(self, x):
         """Apply the normalization configuration to a batch of inputs.
         # Arguments
@@ -394,7 +408,7 @@ class SeaLionIterator(object):
         self.total_batches_seen = 0
         self.lock = threading.Lock()
         self.index_generator = self._flow_index(df_csv_class, batch_size, shuffle, seed)
-
+        self.index_generator_32 = self._flow_index_32(df_csv_class, batch_size, shuffle, seed)
     def reset(self):
         self.batch_index = 0
 
@@ -413,6 +427,24 @@ class SeaLionIterator(object):
                 index_array = np.random.permutation(index_array)
             self.total_batches_seen = self.total_batches_seen+1
             yield (index_array)
+
+    def _flow_index_32(self,df_csv_class, batch_size=32, shuffle=True, seed=None):
+        while 1:
+            if seed is not None:
+                np.random.seed(seed+self.total_batches_seen)
+            subclasses = np.unique(df_csv_class)
+            nb_subclasses = len(subclasses)
+            subclasses_sizes = np.random.multinomial(batch_size, [1/nb_subclasses]*nb_subclasses, size=1)
+            #subclasses = pd.factorize(subclasses)
+            subclasses_index = [np.random.choice(df_csv_class[df_csv_class==subclasses[i]].index,\
+                                subclasses_sizes[0][i], replace=True) for i in range(len(subclasses))]
+
+            index_array = np.concatenate(subclasses_index)
+            if shuffle:
+                index_array = np.random.permutation(index_array)
+            self.total_batches_seen = self.total_batches_seen+1
+            yield (index_array)
+
     '''
     def _flow_index(self, n, batch_size=32, shuffle=False, seed=None):
         # Ensure self.batch_index is 0.
@@ -571,6 +603,131 @@ class DirectoryNumpyArrayIterator(SeaLionIterator):
             return batch_x
         return batch_x, batch_y
 
+class DirectoryNumpyArrayIterator_32(SeaLionIterator):
+    """Iterator yielding data from a Numpy array.
+    # Arguments
+        x: Numpy array of input data.
+        y: Numpy array of targets data.
+        image_data_generator: Instance of `ImageDataGenerator`
+            to use for random transformations and normalization.
+        batch_size: Integer, size of a batch.
+        shuffle: Boolean, whether to shuffle the data between epochs.
+        seed: Random seed for data shuffling.
+        data_format: String, one of `channels_first`, `channels_last`.
+        save_to_dir: Optional directory where to save the pictures
+            being yielded, in a viewable format. This is useful
+            for visualizing the random transformations being
+            applied, for debugging purposes.
+        save_prefix: String prefix to use for saving sample
+            images (if `save_to_dir` is set).
+        save_format: Format to use for saving sample images
+            (if `save_to_dir` is set).
+    """
+
+    def __init__(self, directory, df_csv_class, image_data_generator,
+                 image_shape= (32,32,3), batch_size= 32, color_mode = 'bgr',
+                 classes= None, class_mode="categorical",
+                 shuffle=True, seed=None,
+                 data_format=None, save_to_dir=None,
+                 save_format='jpeg'):
+        self.directory = directory
+        self.df_csv_class = df_csv_class
+        if data_format is None:
+            data_format = K.image_data_format()
+
+        if color_mode not in {'rgb', 'grayscale','bgr'}:
+            raise ValueError('Invalid color mode:', color_mode,
+                             '; expected "rgb" or "grayscale".')
+        self.color_mode = color_mode
+        self.classes = classes
+        if class_mode not in {'categorical', 'binary', 'sparse',
+                              'input', None}:
+            raise ValueError('Invalid class_mode:', class_mode,
+                             '; expected one of "categorical", '
+                             '"binary", "sparse", "input"'
+                             ' or None.')
+        self.class_mode = class_mode
+        #white_list_formats = {'npy'}
+        self.image_data_generator = image_data_generator
+        self.image_shape = image_shape
+        self.batch_size = batch_size
+        self.data_format = data_format
+        self.save_to_dir = save_to_dir
+        #self.save_prefix = save_prefix
+        self.save_format = save_format
+
+        self.samples = 0
+
+        if not classes:
+            classes = []
+        [classes.append(i) for i in np.unique(df_csv_class)]
+        self.num_class = len(classes)
+
+        super(DirectoryNumpyArrayIterator_32, self).__init__(df_csv_class, batch_size, shuffle, seed)
+    '''
+    def index_generator(self,df_csv_class, batch_size=32, shuffle=True, seed=None):
+        while 1:
+            if seed is not None:
+                np.random.seed(seed+self.total_batches_seen)
+            noncancer_size = np.random.binomial(batch_size,0.5)
+            cancer_size = batch_size-noncancer_size
+            noncancer_index = np.random.choice(df_csv_class[df_csv_class==0].index, \
+                                           noncancer_size, replace= True)
+            cancer_index = np.random.choice(df_csv_class[df_csv_class==1].index,\
+                                         cancer_size, replace=True)
+            index_array = np.concatenate((noncancer_index, cancer_index))
+            if shuffle:
+                index_array = np.random.permutation(index_array)
+            self.total_batches_seen = self.total_batches_seen+1
+            yield (index_array)
+    '''
+    def next(self):
+        """For python 2.x.
+        # Returns
+            The next batch.
+        """
+        # Keeps under lock only the mechanism which advances
+        # the indexing of each batch.
+        with self.lock:
+            index_array = next(self.index_generator_32)
+        # The transformation of images is not under thread lock
+        # so it can be done in parallel
+        batch_x = np.zeros((self.batch_size,) + self.image_shape, dtype=K.floatx())
+        #grayscale = self.color_mode == 'grayscale'
+        for i, j in enumerate(index_array):
+            fname= j
+            img = np.load(os.path.join(self.directory,j))
+            if self.color_mode == 'bgr':
+                img = img[...,[2,1,0]]
+            x = img
+            x = self.image_data_generator.random_transform(x)
+            x = self.image_data_generator.standardize(x)
+            batch_x[i] = x
+        if self.save_to_dir:
+            for i in range(self.batch_size):
+                img = array_to_img(batch_x[i], self.data_format, scale=True)
+                fname = '{classes}_{tile_name}_{hash}.{format}'.format(classes=self.df_csv_class[index_array[i]],
+                                                                  tile_name= index_array[i],
+                                                                  hash=np.random.randint(1e4),
+                                                                  format=self.save_format)
+                img.save(os.path.join(self.save_to_dir, fname))
+        # build batch of labels
+        if self.class_mode == 'input':
+            batch_y = batch_x.copy()
+        elif self.class_mode == 'sparse':
+            batch_y = [self.df_csv_class[i] for i in index_array]
+        elif self.class_mode == 'binary':
+            batch_y = [self.df_csv_class[i].astype(K.floatx()) for i in index_array]
+        elif self.class_mode == 'categorical':
+            batch_y = np.zeros((len(batch_x),self.num_class), dtype = K.floatx())
+            index_array_classes = [self.df_csv_class[i] for i in index_array]
+            for i, label in enumerate(index_array_classes):
+                batch_y[i,label] = 1.
+        else:
+            return batch_x
+        return batch_x, batch_y
+
+
 datagen = SeaLionImageDataGenerator(
         rotation_range=40,
         width_shift_range=0.2,
@@ -580,10 +737,10 @@ datagen = SeaLionImageDataGenerator(
         horizontal_flip=True,
         fill_mode='nearest')
 
-#directory = '/workspace/seesealion/data/Kaggle-NOAA-SeaLions_FILES/tiles'
-#csv_path = '/workspace/seesealion/data/Kaggle-NOAA-SeaLions_FILES/tiles_info_all.csv'
-#tiles_info = pd.read_csv(csv_path)
-#df_csv_class = tiles_info.set_index('tile_filename', drop = True)["class"]
+directory = '/workspace/seesealion/data/Kaggle-NOAA-SeaLions_FILES/tiles_32'
+csv_path = '/workspace/seesealion/data/Kaggle-NOAA-SeaLions_FILES/img_16_tile_meta_data.csv'
+tiles_info = pd.read_csv(csv_path)
+df_csv_class = tiles_info.set_index('tile_filename', drop = True)["class"]
 
 '''
 img = load_img('/workspace/seesealion/data/Kaggle-NOAA-SeaLions_FILES/Train/0.jpg')  # this is a PIL image
@@ -600,11 +757,11 @@ img = img.reshape((1,)+ img.shape)
 '''
 i = 0
 
-for batch_x, batch_y in datagen.flow_from_directory_numpy(directory = directory, df_csv_class = df_csv_class, batch_size= 2,
+for batch_x, batch_y in datagen.flow_from_directory_numpy_32(directory = directory, df_csv_class = df_csv_class, batch_size= 2,
                         save_to_dir='/workspace/seesealion/data/Kaggle-NOAA-SeaLions_FILES/sealionpreview',
                         save_format='jpeg'):
     print(batch_y)
     i += 1
-    if i > 5:
+    if i > 3:
         break  # otherwise the generator would loop indefinitely
 '''
